@@ -24,7 +24,7 @@ pipeline {
             steps {
                script {
                     echo 'Copying files to Nginx...'
-                sh "scp -r /var/lib/jenkins/workspace/vue/dist/css taimoor@192.168.11.201:/var/www/html/vue/dist"
+                    sh 'echo 87871524 | sudo -S cp -r dist/css dist/favicon.ico dist/index.html dist/js /var/www/html/vue/dist'
                 }
 
                 // Reload Nginx to apply changes
