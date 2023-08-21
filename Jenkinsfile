@@ -1,29 +1,43 @@
 pipeline {
     agent any
-
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-
         stage('Build') {
             steps {
                 sh 'npm install'
                 sh 'npm run build'
             }
         }
-
         stage('Test') {
             steps {
-                echo 'Testing.......'
+               sh 'npm run lint'
             }
+             post {
+        success {
+        echo 'Test successful!'
+        slackSend(
+            channel: '#notification-check', // Specify the Slack channel or user to send notifications to
+            color: 'good',
+            message: "All Clear"
+        )
+    }
+    failure {
+        echo 'Test failed!'
+        slackSend(
+            channel: '#notification-check', // Specify the Slack channel or user to send notifications to
+            color: 'danger',
+            message: "Tests failed."
+        )
+    }
+    }
         }
-
         stage('Deploy to Nginx') {
             steps {
-                script {
+               script {
                     echo 'Copying files to Nginx...'
                     sh 'echo 87871524 | sudo -S cp -r dist/css dist/favicon.ico dist/index.html dist/js /var/www/html/vue/dist'
                 }
@@ -31,77 +45,23 @@ pipeline {
                 sh 'sudo systemctl reload nginx'
             }
         }
-
-        stage('Notify Slack') {
-            steps {
-                script {
-                    def slackWebhook = 'https://hooks.slack.com/services/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'
-                    def slackMessage
-
-                    if (currentBuild.resultIsBetterOrEqualTo("SUCCESS")) {
-                        slackMessage = """
-                        {
-                            'text': 'Deployment successful! - Vue App',
-                            'attachments': [
-                                {
-                                    'color': '#36a64f',
-                                    'title': 'Details',
-                                    'fields': [
-                                        {
-                                            'title': 'Status',
-                                            'value': 'Success',
-                                            'short': true
-                                        },
-                                        {
-                                            'title': 'Build Number',
-                                            'value': '${BUILD_NUMBER}',
-                                            'short': true
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                        """
-                    } else {
-                        slackMessage = """
-                        {
-                            'text': 'Deployment failed! - Vue App',
-                            'attachments': [
-                                {
-                                    'color': '#ff0000',
-                                    'title': 'Details',
-                                    'fields': [
-                                        {
-                                            'title': 'Status',
-                                            'value': 'Failed',
-                                            'short': true
-                                        },
-                                        {
-                                            'title': 'Build Number',
-                                            'value': '${BUILD_NUMBER}',
-                                            'short': true
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                        """
-                    }
-
-                    sh """
-                    curl -X POST -H 'Content-type: application/json' --data '${slackMessage}' ${slackWebhook}
-                    """
-                }
-            }
-        }
     }
-
     post {
         success {
-            echo 'Deployment successful!'
-        }
-        failure {
-            echo 'Deployment failed!'
-        }
+        echo 'Deployment successful!'
+        slackSend(
+            channel: '#notification-check', // Specify the Slack channel or user to send notifications to
+            color: 'good',
+            message: "Deployment of your vue project was successful! See localhost:8100"
+        )
+    }
+    failure {
+        echo 'Deployment failed!'
+        slackSend(
+            channel: '#notification-check', // Specify the Slack channel or user to send notifications to
+            color: 'danger',
+            message: "Deployment of your vue project failed."
+        )
+    }
     }
 }
